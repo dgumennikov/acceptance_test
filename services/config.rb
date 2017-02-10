@@ -458,3 +458,119 @@ COMPOSITE::coreo_uni_util_jsrunner.cloudtrail-tags-rollup.return
       :to => '${AUDIT_AWS_CLOUDTRAIL_ALERT_RECIPIENT}', :subject => 'CloudCoreo cloudtrail rule results on PLAN::stack_name :: PLAN::name'
   })
 end
+
+coreo_aws_ec2_securityGroups "${TOMCAT_NAME}-elb-sg" do
+  action :sustain
+  description "Open https to the world"
+  vpc "${VPC_NAME}"
+  allows [ 
+          { 
+            :direction => :ingress,
+            :protocol => :tcp,
+            :ports => [443,80,8080],
+            :cidrs => ["0.0.0.0/0"],
+          },{ 
+            :direction => :egress,
+            :protocol => :tcp,
+            :ports => ["0..65535"],
+            :cidrs => ["0.0.0.0/0"],
+          }
+    ]
+end
+
+coreo_aws_ec2_elb "${TOMCAT_NAME}-elb" do
+  action :sustain
+  type "public"
+  vpc "${VPC_NAME}"
+  subnet "${PUBLIC_SUBNET_NAME}"
+  security_groups ["${TOMCAT_NAME}-elb-sg"]
+  listeners [
+             {:elb_protocol => 'http', :elb_port => 8080, :to_protocol => 'http', :to_port => 8080}
+            ]
+  health_check_protocol 'tcp'
+  health_check_port "8080"
+  #health_check_path "/platform-services/api/v1/healthcheck"
+  #health_check_path "/"
+  health_check_interval 300
+  health_check_timeout 30
+  health_check_unhealthy_threshold 10
+  health_check_healthy_threshold 2
+end
+
+coreo_aws_ec2_securityGroups "${TOMCAT_NAME}" do
+  action :sustain
+  description "Yum repo manager security group"
+  vpc "${VPC_NAME}"
+  allows [ 
+          { 
+            :direction => :ingress,
+            :protocol => :tcp,
+            :ports => ${TOMCAT_INGRESS_CIDR_PORTS},
+            :cidrs => ${TOMCAT_INGRESS_CIDRS}
+          },{ 
+            :direction => :ingress,
+            :protocol => :tcp,
+            :ports => ${TOMCAT_INGRESS_GROUP_PORTS},
+            :groups => ["${TOMCAT_NAME}-elb-sg"]
+          },{ 
+            :direction => :egress,
+            :protocol => :tcp,
+            :ports => ["0..65535"],
+            :cidrs => ["0.0.0.0/0"]
+          }
+    ]
+end
+
+coreo_aws_iam_policy "${TOMCAT_NAME}" do
+  action :sustain
+  policy_name "AllowS3Yum"
+  policy_document <<-EOH
+{
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Resource": [
+          "arn:aws:s3:::${YUM_REPO_BUCKET}",
+          "arn:aws:s3:::${YUM_REPO_BUCKET}/*"
+      ],
+      "Action": [ 
+          "s3:*"
+      ]
+    }
+  ]
+}
+EOH
+end
+
+coreo_aws_iam_instance_profile "${TOMCAT_NAME}" do
+  action :sustain
+  policies ["${TOMCAT_NAME}"]
+end
+
+coreo_aws_ec2_instance "${TOMCAT_NAME}" do
+  action :define
+  image_id "${AWS_LINUX_AMI}"
+  size "${TOMCAT_SIZE}"
+  security_groups ["${TOMCAT_NAME}"]
+  role "${TOMCAT_NAME}"
+  associate_public_ip true
+  upgrade_trigger "3"
+  ssh_key "${TOMCAT_KEYPAIR}"
+  disks [
+         {
+           :device_name => "/dev/xvda",
+           :volume_size => 25
+         }
+        ]
+end
+
+coreo_aws_ec2_autoscaling "${TOMCAT_NAME}" do
+  action :sustain 
+  minimum ${TOMCAT_GROUP_MINIMUM}
+  maximum ${TOMCAT_GROUP_MAXIMUM}
+  server_definition "${TOMCAT_NAME}"
+  subnet "${PUBLIC_SUBNET_NAME}"
+  elbs ["${TOMCAT_NAME}-elb"]
+end
+Contact GitHub API Training Shop Blog About
+
