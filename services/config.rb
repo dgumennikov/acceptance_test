@@ -556,5 +556,4 @@ coreo_aws_ec2_autoscaling "${TOMCAT_NAME}" do
   subnet "${PUBLIC_SUBNET_NAME}"
   elbs ["${TOMCAT_NAME}-elb"]
 end
-Contact GitHub API Training Shop Blog About
 
