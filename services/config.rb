@@ -39,3 +39,42 @@ coreo_aws_vpc_subnet "${PUBLIC_SUBNET_NAME}${SUFFIX}" do
   map_public_ip_on_launch true
   region "${REGION}"
 end
+
+coreo_aws_rule "cloudtrail-inventory" do
+  action :nothing
+  service :cloudtrail
+  link "http://kb.cloudcoreo.com/mydoc-inventory.html"
+  include_violations_in_count false
+  display_name "Cloudtrail Inventory"
+  description "This rule performs an inventory on all trails in the target AWS account."
+  category "Inventory"
+  suggested_action "None."
+  level "Informational"
+  meta_cis_id "99.999"
+  objectives ["trails"]
+  audit_objects ["object.trail_list.name"]
+  operators ["=~"]
+  raise_when [//]
+  id_map "object.trail_list.name"
+end
+
+coreo_aws_rule "cloudtrail-service-disabled" do
+  action :nothing
+  service :cloudtrail
+  link "http://kb.cloudcoreo.com/mydoc_cloudtrail-service-disabled.html"
+  display_name "Cloudtrail Service is Disabled"
+  description "CloudTrail logging is not enabled for this region. It should be enabled."
+  category "Audit"
+  suggested_action "Enable CloudTrail logs for each region."
+  level "Warning"
+  meta_cis_id "99.998"
+  objectives ["trails"]
+  formulas ["count"]
+  audit_objects ["trail_list"]
+  operators ["=="]
+  raise_when [0]
+  id_map "stack.current_region"
+end
+
+# the jsrunner puts cloudtrail in for the service
+
