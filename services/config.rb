@@ -547,22 +547,6 @@ coreo_aws_iam_instance_profile "${TOMCAT_NAME}" do
   policies ["${TOMCAT_NAME}"]
 end
 
-coreo_aws_ec2_instance "${TOMCAT_NAME}" do
-  action :define
-  image_id "${AWS_LINUX_AMI}"
-  size "${TOMCAT_SIZE}"
-  security_groups ["${TOMCAT_NAME}"]
-  role "${TOMCAT_NAME}"
-  associate_public_ip true
-  upgrade_trigger "3"
-  ssh_key "${TOMCAT_KEYPAIR}"
-  disks [
-         {
-           :device_name => "/dev/xvda",
-           :volume_size => 25
-         }
-        ]
-end
 
 coreo_aws_ec2_autoscaling "${TOMCAT_NAME}" do
   action :sustain 
