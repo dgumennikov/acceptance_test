@@ -548,12 +548,3 @@ coreo_aws_iam_instance_profile "${TOMCAT_NAME}" do
 end
 
 
-coreo_aws_ec2_autoscaling "${TOMCAT_NAME}" do
-  action :sustain 
-  minimum ${TOMCAT_GROUP_MINIMUM}
-  maximum ${TOMCAT_GROUP_MAXIMUM}
-  server_definition "${TOMCAT_NAME}"
-  subnet "${PUBLIC_SUBNET_NAME}"
-  elbs ["${TOMCAT_NAME}-elb"]
-end
-
